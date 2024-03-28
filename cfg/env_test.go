@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/94peter/micro-service/cfg"
+	"github.com/94peter/microservice/cfg"
 )
 
 func TestGetFromEnv(t *testing.T) {

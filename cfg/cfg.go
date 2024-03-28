@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/94peter/api-toolkit/mid"
-	"github.com/94peter/micro-service/di"
-	"github.com/94peter/micro-service/grpc_tool/interceptor"
+	"github.com/94peter/microservice/di"
+	"github.com/94peter/microservice/grpc_tool/interceptor"
 	"github.com/gin-gonic/gin"
 )
 

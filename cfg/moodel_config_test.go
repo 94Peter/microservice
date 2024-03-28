@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/94peter/micro-service/di"
+	"github.com/94peter/microservice/di"
 )
 
 type TestModel struct {
