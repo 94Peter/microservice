@@ -1,4 +1,4 @@
-package micro_service
+package microservice
 
 import (
 	"context"
