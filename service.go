@@ -28,7 +28,7 @@ type microService[T cfg.ModelCfg, R di.ServiceDI] struct {
 	cfgMgr cfg.ModelCfgMgr
 }
 
-func NewMicroService[T cfg.ModelCfg, R di.ServiceDI](mycfg T, mydi R) (MicroService[T, R], error) {
+func New[T cfg.ModelCfg, R di.ServiceDI](mycfg T, mydi R) (MicroService[T, R], error) {
 	diCfg, err := di.GetConfigFromEnv()
 	if err != nil {
 		return nil, err
