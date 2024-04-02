@@ -11,13 +11,17 @@ import (
 )
 
 const (
-	topicPrefix = "events/%s/%s"
+	topicPrefix = "events/%s/%s/%s"
 )
 
+type MutiEventMsg interface {
+	GetId() string
+}
+
 type MutiEventServ interface {
-	Emit(service, model string, msg any) error
-	Register(service, model string, handler trans.Trans) error
-	UnRegister(service, model string, handler trans.Trans)
+	Emit(service, model string, msg MutiEventMsg) error
+	Register(service, model, msgId string, handler trans.Trans) error
+	UnRegister(service, model, msgId string, handler trans.Trans)
 	Run(context.Context)
 }
 
@@ -30,16 +34,17 @@ func NewMultiService(cfg *config.Config) MutiEventServ {
 	event := &multiEventServ{
 		topicHandler: make(map[string][]trans.Trans),
 	}
+	cfg.AddTopics("events/#")
 	mqttServ := mqtt.NewMqttServ(cfg, map[string]trans.Trans{
-		"event/#": event,
+		"events/#": event,
 	})
 
 	event.mqttServ = mqttServ
 	return event
 }
 
-func (m *multiEventServ) Emit(service, model string, msg any) error {
-	topic := fmt.Sprintf(topicPrefix, service, model)
+func (m *multiEventServ) Emit(service, model string, msg MutiEventMsg) error {
+	topic := fmt.Sprintf(topicPrefix, service, model, msg.GetId())
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -47,8 +52,8 @@ func (m *multiEventServ) Emit(service, model string, msg any) error {
 	return m.mqttServ.Publish(topic, 0, data)
 }
 
-func (m *multiEventServ) Register(service, model string, handler trans.Trans) error {
-	key := fmt.Sprintf(topicPrefix, service, model)
+func (m *multiEventServ) Register(service, model, id string, handler trans.Trans) error {
+	key := fmt.Sprintf(topicPrefix, service, model, id)
 	if _, ok := m.topicHandler[key]; !ok {
 		m.topicHandler[key] = make([]trans.Trans, 0)
 	}
@@ -56,8 +61,8 @@ func (m *multiEventServ) Register(service, model string, handler trans.Trans) er
 	return nil
 }
 
-func (m *multiEventServ) UnRegister(service, model string, handler trans.Trans) {
-	key := fmt.Sprintf(topicPrefix, service, model)
+func (m *multiEventServ) UnRegister(service, model, id string, handler trans.Trans) {
+	key := fmt.Sprintf(topicPrefix, service, model, id)
 	for i, h := range m.topicHandler[key] {
 		if h == handler {
 			m.topicHandler[key] = append(m.topicHandler[key][:i], m.topicHandler[key][i+1:]...)
