@@ -9,6 +9,7 @@ import (
 	"github.com/94peter/microservice/grpc_tool/interceptor"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	pkgErr "github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -73,9 +74,9 @@ func (m *modelCfgMgr[T]) StreamServerInterceptor() grpc.StreamServerInterceptor 
 			data.Close()
 			runtime.GC()
 		}()
-
-		return handler(srv, interceptor.NewServerStream(
-			setToCtx(ctx, data), ss))
+		wrapStream := grpc_middleware.WrapServerStream(ss)
+		wrapStream.WrappedContext = setToCtx(ctx, data)
+		return handler(srv, wrapStream)
 
 	})
 }

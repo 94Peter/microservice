@@ -84,10 +84,11 @@ func RunService(ss ...ServiceHandler) {
 		}(ctx, s)
 	}
 	<-sig
-	for _, cancel := range ctxCancelSlice {
-		if cancel != nil {
-			cancel()
+	for i := len(ctxCancelSlice) - 1; i >= 0; i-- {
+		if ctxCancelSlice[i] != nil {
+			ctxCancelSlice[i]()
 		}
 	}
+
 	wg.Wait()
 }
