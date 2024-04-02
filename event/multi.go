@@ -30,17 +30,20 @@ type multiEventServ struct {
 	mqttServ     mqtt.MqttServer
 }
 
-func NewMultiService(cfg *config.Config) MutiEventServ {
+func NewMultiService(cfg *config.Config) (MutiEventServ, error) {
 	event := &multiEventServ{
 		topicHandler: make(map[string][]trans.Trans),
 	}
 	cfg.AddTopics("events/#")
-	mqttServ := mqtt.NewMqttServ(cfg, map[string]trans.Trans{
+	mqttServ, err := mqtt.NewMqttServ(cfg, map[string]trans.Trans{
 		"events/#": event,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	event.mqttServ = mqttServ
-	return event
+	return event, nil
 }
 
 func (m *multiEventServ) Emit(service, model string, msg MutiEventMsg) error {
