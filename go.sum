@@ -3,8 +3,8 @@ github.com/94peter/api-toolkit v1.2.1 h1:s0CrzkBC7iMZvrhcuqFfvRWOIU77Da0KRiv16rx
 github.com/94peter/api-toolkit v1.2.1/go.mod h1:sh1265u4Z2/Q6M2fNE0v/Pm7MHzB9Z9pyWZxzjVSV1U=
 github.com/94peter/log v1.0.5 h1:x3y12WGEQOXszK2lh05ZblQsHZo+ShkF1uLMAgnAvOs=
 github.com/94peter/log v1.0.5/go.mod h1:m1o6Rv8RXqDex0cfplDLMdJ3EGAPUDmJE8983jOtpG8=
-github.com/94peter/mqtt v1.3.1 h1:EfFBAh8BgiKDK51xFCL7wEPbtWgOPVvj43cVoONTSWs=
-github.com/94peter/mqtt v1.3.1/go.mod h1:BXiVEDPoCM2aeVbfmry6CTy3LjlCOvdxDKsYc9AbbE8=
+github.com/94peter/mqtt v1.3.2 h1:S0kvhma3oCHB0Q3JJPsyuy4inpLrAVgJ1r+nrXHh7FE=
+github.com/94peter/mqtt v1.3.2/go.mod h1:BXiVEDPoCM2aeVbfmry6CTy3LjlCOvdxDKsYc9AbbE8=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 h1:DDGfHa7BWjL4YnC6+E63dPcxHo2sUxDIu8g3QgEJdRY=
