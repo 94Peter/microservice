@@ -9,9 +9,21 @@ type Handler[T any] interface {
 	EventHandle(service, model string, msg T) error
 }
 
+type myHandler[T any] struct {
+	Handler func(msg T)
+}
+
+func (h *myHandler[T]) EventHandle(service, model string, msg T) error {
+	if h.Handler != nil {
+		h.Handler(msg)
+	}
+	return nil
+}
+
 type Event[T any] interface {
 	UnRegister(service, model string, handler Handler[T])
 	Register(service, model string, handler Handler[T]) error
+	RegisterFunc(service, model string, handler func(T)) Handler[T]
 	Emit(service, model string, msg T) error
 }
 
@@ -39,6 +51,12 @@ func (e *singleEvent[T]) UnRegister(service, model string, handler Handler[T]) {
 			e.handlers[key] = append(e.handlers[key][:i], e.handlers[key][i+1:]...)
 		}
 	}
+}
+
+func (e *singleEvent[T]) RegisterFunc(service, model string, handler func(T)) Handler[T] {
+	myHandler := &myHandler[T]{Handler: handler}
+	e.Register(service, model, myHandler)
+	return myHandler
 }
 
 func (e *singleEvent[T]) Register(service, model string, handler Handler[T]) error {
