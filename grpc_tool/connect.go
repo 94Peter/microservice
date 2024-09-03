@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/url"
+	"regexp"
 	"time"
 
 	"google.golang.org/grpc"
@@ -19,18 +21,35 @@ type Connection interface {
 	WaitUntilReady() bool
 }
 
-func NewConnection(ctx context.Context, address string, useTLS bool) (Connection, error) {
+var grpcSchemaRegex = regexp.MustCompile(`^grpc(s)?://`)
+
+func NewConnection(ctx context.Context, address string) (Connection, error) {
 	var conn *grpc.ClientConn
 	var err error
-	if useTLS {
-		conn, err = grpc.DialContext(ctx, address,
+	hasPrefix := grpcSchemaRegex.MatchString(address)
+	var schema string
+	var host string
+	if hasPrefix {
+		u, err := url.Parse(address)
+		if err != nil {
+			return nil, fmt.Errorf("address [%s] error: %s", address, err.Error())
+		}
+		schema = u.Scheme
+		host = u.Host
+	} else {
+		schema = "grpc"
+		host = address
+	}
+
+	if schema == "grpcs" {
+		conn, err = grpc.DialContext(ctx, host,
 			grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
 				InsecureSkipVerify: true,
 			})),
 			grpc.WithBlock(),
 		)
 	} else {
-		conn, err = grpc.DialContext(ctx, address,
+		conn, err = grpc.DialContext(ctx, host,
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 			grpc.WithBlock(),
 		)
@@ -75,7 +94,6 @@ func (my *myGrpcImpl) WaitUntilReady() bool {
 func NewAutoReconn(address string, useTLS bool, timeout time.Duration) *AutoReConn {
 	return &AutoReConn{
 		address:   address,
-		useTLS:    useTLS,
 		timeout:   timeout,
 		Ready:     make(chan bool),
 		Done:      make(chan bool),
@@ -87,7 +105,6 @@ type AutoReConn struct {
 	Connection
 
 	address string
-	useTLS  bool
 	timeout time.Duration
 
 	Ready     chan bool
@@ -98,7 +115,7 @@ type AutoReConn struct {
 type GetGrpcFunc func(myGrpc Connection) error
 
 func (my *AutoReConn) Connect(ctx context.Context) (Connection, error) {
-	return NewConnection(ctx, my.address, my.useTLS)
+	return NewConnection(ctx, my.address)
 }
 
 func (my *AutoReConn) IsValid() bool {
