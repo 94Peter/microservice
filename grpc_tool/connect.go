@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 )
 
 type Connection interface {
@@ -23,7 +24,13 @@ type Connection interface {
 
 var grpcSchemaRegex = regexp.MustCompile(`^grpc(s)?://`)
 
-func NewConnection(ctx context.Context, address string) (Connection, error) {
+var kacp = keepalive.ClientParameters{
+	Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
+	Timeout:             time.Second,      // wait 1 second for ping ack before considering the connection dead
+	PermitWithoutStream: true,             // send pings even without active streams
+}
+
+func NewConnection(address string) (Connection, error) {
 	var conn *grpc.ClientConn
 	var err error
 	hasPrefix := grpcSchemaRegex.MatchString(address)
@@ -42,16 +49,15 @@ func NewConnection(ctx context.Context, address string) (Connection, error) {
 	}
 
 	if schema == "grpcs" {
-		conn, err = grpc.DialContext(ctx, host,
+		conn, err = grpc.NewClient(host,
 			grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
 				InsecureSkipVerify: true,
-			})),
-			grpc.WithBlock(),
+			})), grpc.WithKeepaliveParams(kacp),
 		)
 	} else {
-		conn, err = grpc.DialContext(ctx, host,
+		conn, err = grpc.NewClient(host,
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithBlock(),
+			grpc.WithKeepaliveParams(kacp),
 		)
 	}
 
@@ -91,10 +97,9 @@ func (my *myGrpcImpl) WaitUntilReady() bool {
 	return my.WaitForStateChange(ctx, connectivity.Ready)
 }
 
-func NewAutoReconn(address string, useTLS bool, timeout time.Duration) *AutoReConn {
+func NewAutoReconn(address string) *AutoReConn {
 	return &AutoReConn{
 		address:   address,
-		timeout:   timeout,
 		Ready:     make(chan bool),
 		Done:      make(chan bool),
 		Reconnect: make(chan bool),
@@ -105,7 +110,6 @@ type AutoReConn struct {
 	Connection
 
 	address string
-	timeout time.Duration
 
 	Ready     chan bool
 	Done      chan bool
@@ -114,8 +118,8 @@ type AutoReConn struct {
 
 type GetGrpcFunc func(myGrpc Connection) error
 
-func (my *AutoReConn) Connect(ctx context.Context) (Connection, error) {
-	return NewConnection(ctx, my.address)
+func (my *AutoReConn) Connect() (Connection, error) {
+	return NewConnection(my.address)
 }
 
 func (my *AutoReConn) IsValid() bool {
@@ -127,20 +131,13 @@ func (my *AutoReConn) IsValid() bool {
 
 func (my *AutoReConn) Process(f GetGrpcFunc) {
 	var err error
-	basicCtx := context.Background()
-	var ctx context.Context
-	var cancel context.CancelFunc
+	isFirst := true
 	for {
-		if cancel != nil {
-			cancel()
+		if !isFirst {
+			time.Sleep(10 * time.Second)
 		}
-		if my.timeout > 0 {
-			ctx, cancel = context.WithTimeout(basicCtx, my.timeout)
-		} else {
-			ctx = basicCtx
-		}
-
-		my.Connection, err = my.Connect(ctx)
+		isFirst = false
+		my.Connection, err = my.Connect()
 		if err != nil {
 			continue
 		}
@@ -148,8 +145,5 @@ func (my *AutoReConn) Process(f GetGrpcFunc) {
 			continue
 		}
 		break
-	}
-	if cancel != nil {
-		cancel()
 	}
 }
