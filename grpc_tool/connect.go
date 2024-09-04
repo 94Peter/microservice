@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/94peter/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
@@ -25,8 +26,8 @@ type Connection interface {
 var grpcSchemaRegex = regexp.MustCompile(`^grpc(s)?://`)
 
 var kacp = keepalive.ClientParameters{
-	Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
-	Timeout:             time.Second,      // wait 1 second for ping ack before considering the connection dead
+	Time:                30 * time.Second, // send pings every 10 seconds if there is no activity
+	Timeout:             30 * time.Second, // wait 1 second for ping ack before considering the connection dead
 	PermitWithoutStream: true,             // send pings even without active streams
 }
 
@@ -52,7 +53,8 @@ func NewConnection(address string) (Connection, error) {
 		conn, err = grpc.NewClient(host,
 			grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
 				InsecureSkipVerify: true,
-			})), grpc.WithKeepaliveParams(kacp),
+			})),
+			grpc.WithKeepaliveParams(kacp),
 		)
 	} else {
 		conn, err = grpc.NewClient(host,
@@ -60,7 +62,6 @@ func NewConnection(address string) (Connection, error) {
 			grpc.WithKeepaliveParams(kacp),
 		)
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("address [%s] error: %s", address, err.Error())
 	}
@@ -103,7 +104,12 @@ func NewAutoReconn(address string) *AutoReConn {
 		Ready:     make(chan bool),
 		Done:      make(chan bool),
 		Reconnect: make(chan bool),
+		Error:     make(chan error),
 	}
+}
+
+type AutoReConnInter interface {
+	SetLog(l log.Logger)
 }
 
 type AutoReConn struct {
@@ -114,6 +120,9 @@ type AutoReConn struct {
 	Ready     chan bool
 	Done      chan bool
 	Reconnect chan bool
+	Error     chan error
+
+	log log.Logger
 }
 
 type GetGrpcFunc func(myGrpc Connection) error
@@ -139,11 +148,24 @@ func (my *AutoReConn) Process(f GetGrpcFunc) {
 		isFirst = false
 		my.Connection, err = my.Connect()
 		if err != nil {
+			my.printErr(err)
 			continue
 		}
 		if err = f(my.Connection); err != nil {
+			my.printErr(err)
 			continue
 		}
 		break
 	}
+}
+
+func (my *AutoReConn) printErr(err error) {
+	if my.log == nil {
+		return
+	}
+	my.log.Warn(err.Error())
+}
+
+func (my *AutoReConn) SetLog(l log.Logger) {
+	my.log = l
 }
