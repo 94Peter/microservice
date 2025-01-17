@@ -131,6 +131,11 @@ func (my *AutoReConn) Connect() (Connection, error) {
 	return NewConnection(my.address)
 }
 
+func (my *AutoReConn) Close() error {
+	my.Done <- true
+	return my.Connection.Close()
+}
+
 func (my *AutoReConn) IsValid() bool {
 	if my.Connection == nil {
 		return false
@@ -181,7 +186,6 @@ func (my *AutoReConn) Start(f GetGrpcFunc) {
 				continue
 			}
 		case <-my.Done:
-			my.Close()
 			return
 		}
 	}
