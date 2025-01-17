@@ -138,7 +138,7 @@ func (my *AutoReConn) IsValid() bool {
 	return my.Connection.IsValid()
 }
 
-func (my *AutoReConn) Process(f GetGrpcFunc) {
+func (my *AutoReConn) process(f GetGrpcFunc) {
 	var err error
 	isFirst := true
 	for {
@@ -168,4 +168,21 @@ func (my *AutoReConn) printErr(err error) {
 
 func (my *AutoReConn) SetLog(l log.Logger) {
 	my.log = l
+}
+
+func (my *AutoReConn) Start(f GetGrpcFunc) {
+	go my.process(f)
+	for {
+		select {
+		case <-my.Ready:
+			continue
+		case <-my.Reconnect:
+			if !my.WaitUntilReady() {
+				continue
+			}
+		case <-my.Done:
+			my.Close()
+			return
+		}
+	}
 }
