@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/94peter/mqtt"
 	"github.com/94peter/mqtt/config"
@@ -52,7 +53,9 @@ func (m *multiEventServ) Emit(service, model string, msg MutiEventMsg) error {
 	if err != nil {
 		return err
 	}
-	return m.mqttServ.Publish(topic, 0, data)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return m.mqttServ.Publish(ctx, topic, 0, data)
 }
 
 func (m *multiEventServ) Register(service, model, id string, handler trans.Trans) error {
